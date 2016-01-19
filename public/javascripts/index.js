@@ -1,6 +1,6 @@
 $(document).on('ready', function() {
 
-  var questionList=[];
+  var questionList = [];
   // hide question container by default
   $('#askQuestionFormContainer').hide();
 
@@ -22,7 +22,10 @@ $(document).on('ready', function() {
         url: 'questions',
         data: question,
         success: function(data) {
-          console.log(data);
+          $('#askQuestionFormContainer').hide();
+          $('#question').val('')
+          $('#tag').val('')
+          appendQuestions(data)
         },
         error: function(err) {
           console.log(err);
@@ -40,8 +43,8 @@ $(document).on('ready', function() {
         url: 'questions',
         success: function(data) {
           questionList.push(data);
-          prepareQuestionsList(data)
-          console.log(questionList);
+          prepareQuestionsList(data);
+
         },
         error: function(err) {
           console.log(err);
@@ -50,26 +53,80 @@ $(document).on('ready', function() {
     }
     // end of load question function
 
-    getQuestion();
+  getQuestion();
 
-    // function to prepare list of questions
-    var prepareQuestionsList = function(questionList){
 
-      $('#question_panel').html('');
 
-      $.each(questionList,function(key,val){
+  //function to append questions into question list
+  var appendQuestions = function(ques) {
 
-        var questionTemplate = '<div class="panel panel-default">'
-                               +'<div class="panel-heading">'+val.question
-                               +'<span class="badge" id="totalAns">'+val.answers.length+'</span></div>'
-                               +'<div class="panel-body">'+val.answers+'</div>'
-                               +'<div class="panel-footer">Remove Add Answer</div></div>'
-        $('#question_panel').append(questionTemplate)
+    var answerBody = '<p><i>Tags : '+ ques.tags +'</i></p><hr class="divider"'
+
+    if (ques.answers.length === 0) {
+      answerBody += '<p><i>No answer available !</i></p>'
+    } else {
+      $.each(ques.answers, function(key, val) {
+        key = key+1;
+        answerBody += '<p>Answer ' + key + ' -> '+val+'</p><hr class="divider">'
+      })
+    }
+
+    var questionTemplate = '<div class="panel panel-default" id=question_'+ques._id+'>' + '<div class="panel-heading">'
+                            + ques.question + '<span class="badge" id="totalAns'+ques._id+'">' + ques.answers.length + '</span></div>' + '<div class="panel-body">' + answerBody + '</div>'
+                            + '<div class="panel-footer"><button class="btn btn-danger" id="delete_'+ques._id+'">Remove this question</button>'
+                            + '<div class="col-md-10"><div class="input-group"> <input type="text" class="form-control" placeholder="Enter your answer here .." id="anstext_'+ques._id+'"><span class="input-group-btn"><button class="btn btn-success" id="ans_'+ques._id+'">Answer this question</button></span></div></div>'
+
+    $('#question_panel').append(questionTemplate);
+
+    // function to delete question
+    $('#delete_'+ques._id).on('click',function(){
+
+      $.ajax({
+        type:'DELETE',
+        url:'./questions/'+ques._id,
+        success:function(){
+          $('#question_'+ques._id).remove();
+        },
+        error:function(err){
+          console.log('could not delete'+err);
+        }
 
       })
+    })
+    // end of delete function
+
+    // function to add answer
+    $('#ans_'+ques._id).on('click',function(){
+
+      $.ajax({
+        type:'PUT',
+        url:'./questions/'+ques._id,
+        data:{'answer':$('#anstext_'+ques._id).val()},
+        success:function(question){
+          $('#question_'+ques._id).remove();
+          appendQuestions(question)
+        },
+        error:function(err){
+          console.log('could not update'+err);
+        }
+
+      })
+    })
+    // end of add answer function
 
 
-    }
+  }
+
+  // function to prepare list of questions
+  var prepareQuestionsList = function(questionList) {
+
+    $('#question_panel').html('');
+
+    $.each(questionList, function(key, val) {
+      appendQuestions(val);
+    })
+
+  }
 
 
 });
